@@ -1,16 +1,16 @@
-# arelia
-Reliability Scoring and Masking of Multiple Sequence Alignment
+# ARELIA
+Reliability Scoring and Masking of Multiple Sequence Alignments
 
 -------------
 # Description
 -------------
-`arelia` is a python script that efficiently calculates residue and columns reliability scores for given multiple sequence alignments, and maskes the alignments based on the reliability scores. Currently, only amino acid alignments are supported.
+ARELIA is a python script that efficiently calculates residue and columns reliability scores for given multiple sequence alignments, and maskes the alignments based on the reliability scores. Currently, only amino acid alignments are supported.
 
 --------------
 # Installation
 --------------
 
-`arelia` is cross-platform software.
+ARELIA is cross-platform software.
 
 ## Dependency:
 
@@ -23,7 +23,7 @@ Reliability Scoring and Masking of Multiple Sequence Alignment
 ```
 $ chmod +x /path/to/your/arelia.py
 ```
-and check it by printing a help page.
+* Check it by printing a help page.
 ```
 arelia.py -h
 ```
