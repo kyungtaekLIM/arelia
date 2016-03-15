@@ -52,7 +52,7 @@ class Seq(list):
                 else:
                     seq += l
             self.add(tag.strip(), seq.strip().replace(' ',''))
-
+        
         elif infmt == 'msf':
             _, alg = string.split('//')
             blocks = alg.strip().split('\n\n')
@@ -109,7 +109,7 @@ class Seq(list):
                     frag = o.seq[count:count+block_len]
                     if not frag:
                         break
-                    seq.append(frag.decode())
+                    seq.append(frag)
                     count += block_len
                 seqs.append(seq)
             oh.write(' %s %s\n' % (len(self), max_seq_len))
@@ -139,7 +139,7 @@ class Seq(list):
                     frag = ob.seq[i:i+line_len]
                     if not frag:
                         break
-                    l += frag.decode()+'\n'
+                    l += frag+'\n'
                     i += line_len
                 oh.write(l)
     
@@ -155,7 +155,7 @@ class Seq(list):
         nseqlen = seqarr.shape[1]
         if nseqlen:
             for i, seq in enumerate(seqarr.view('S'+str(nseqlen))[:,0]):
-                o.add(tags[i], seq)
+                o.add(tags[i], str(seq.decode())) #decode the frag for python3 compatibility.
             return o
 
 #copied from numpy 1.9 to support lower versions
@@ -380,8 +380,9 @@ class ARELIA(dict):
     #the number of amino acids
     res_len = len(res)
 
-    #esidue and gap characters in the form of 'byte'. First 20 characters for amino acids, the others for gap and ambiguous symbols.
-    ele_bytes = np.array([res+gap_eles]).view(np.byte)
+    #residue and gap characters in the form of 'byte'. First 20 characters for amino acids, the others for gap and ambiguous symbols.
+    #dtype='S' is necessary because python3 string format is unicode.
+    ele_bytes = np.array([res+gap_eles], dtype='S').view(np.byte)
 
     #integer representations of ele_bytes. Ambiguous symbols are treated as a gap.
     ele_ints = np.arange(len(ele_bytes), dtype=np.uint8)
@@ -399,11 +400,12 @@ class ARELIA(dict):
             self.tags.append(e.tag)
             seqs.append([e.seq.upper()])
             seqlen = cur_seqlen
-
+        
         if len(seqs) < 2:
             self.exit('ERROR: Insufficient sequence number.\n')
-
-        self.bytearr = np.array(seqs).view(np.byte)
+        
+        #dtype='S' is necessary because python3 string format is unicode.
+        self.bytearr = np.array(seqs, dtype='S').view(np.byte) 
         self.intarr = maparr(self.bytearr, self.ele_bytes, self.ele_ints)
         self.alnnum, self.alnlen = self.bytearr.shape
         self.gaparr = self.intarr == self.res_len
@@ -470,7 +472,7 @@ class ARELIA(dict):
         weights = None
         if weighting and np.count_nonzero(self.cons_cols) > 0:
             weights = intarr2weight(np.compress(self.cons_cols, self.intarr, axis=1))
-
+        
         SCR = freqs2scores(
                     intarr_acc,
                     np.compress(self.accept_cols, self.gaparr, axis=1),
@@ -683,7 +685,7 @@ if __name__ == '__main__':
     if os.path.isfile(args.input):
     
         ARELIA.go(
-            open(args.input).read(), args.W, weighting=True,
+            open(args.input,'r').read(), args.W, weighting=True,
             cutoff=args.cutoff, gap_cut_accept=.7, gap_cut_cons=.3, gap_penalty=args.gap,
             scr_type_col=args.scr_type_col,
             msa_col=open_if_exists(args.msa_col,'w'),
