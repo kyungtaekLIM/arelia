@@ -333,7 +333,7 @@ def intarr2weight(intarr):
     '''
 
     us, inverse, counts = unique(intarr+np.arange(0, intarr.shape[1]*100, 100), return_inverse=True, return_counts=True)
-    colind, inverse2ind, col_counts = unique((us/100).view(np.int64), return_inverse=True, return_counts=True) 
+    colind, inverse2ind, col_counts = unique((us/100).astype(np.int64), return_inverse=True, return_counts=True) 
     col_w = 1.0 / col_counts
     char_w = 1.0 / counts
     return (col_w[inverse2ind] * char_w)[inverse].reshape(intarr.shape).sum(axis=1)
