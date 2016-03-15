@@ -605,18 +605,18 @@ if __name__ == '__main__':
     # arguments
     parser = argparse.ArgumentParser(
         description='''examples:
-  -write a residue masked MSA
+  -get a residue-masked MSA.
     arelia.py MSA_FILE_IN > MSA_FILE_OUT
    or
     arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT
 
-  -write a residue masked MSA and residue reliability scores
+  -get a residue-masked MSA and residue reliability scores.
     arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT -scr_res SCORE_FILE_OUT
 
-  -process MSA files in a directory recursively 
+  -process MSA files in a directory recursively.
     arelia.py MSA_DIR_IN -msa_res MSA_DIR_OUT -scr_res SCORE_DIR_OUT
 
-  -setting input and output formats
+  -set input and output formats.
     arelia.py MSA_DIR_IN -msa_res MSA_DIR_OUT -infmt fasta -outfmt phylip
 
 '''
