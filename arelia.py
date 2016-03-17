@@ -516,31 +516,63 @@ class ARELIA(dict):
                     print('saved at '+fh.name)
             fh.close()
 
-    def mask_res(self, RS, cutoff, replacement, keep_length=False):
+    def mask_res(self, RS, cutoff, replacement='-', keep_length=False, trim_taxa=False):
         lowarr = RS < cutoff
         nbytearr = self.bytearr.copy()
         nbytearr[np.logical_and(lowarr,~self.gaparr)] = ord(replacement)
-        if not keep_length:
-            argc = ~np.all(np.logical_or(self.gaparr, lowarr), axis=0)
-            return np.compress(argc, nbytearr, axis=1)
-        return nbytearr 
+        
+        ngaparr = np.logical_or(self.gaparr, lowarr)
+        if keep_length:
+            if trim_taxa:
+                argt = ~np.all(ngaparr, axis=1)
+                return np.compress(argt, nbytearr, axis=0)
+            else:  
+                return nbytearr 
+        else:
+            argc = ~np.all(ngaparr, axis=0)
+            nbytearr = np.compress(argc, nbytearr, axis=1)
+            if trim_taxa:
+                argt = ~np.all(ngaparr, axis=1)
+                return np.compress(argt, nbytearr, axis=0)
+            else:
+                return nbytearr 
 
-    def mask_col(self, CS, cutoff):
-        return np.compress(CS>=cutoff, self.bytearr, axis=1)
+    def mask_col(self, CS, cutoff, replacement='-', keep_length=False, trim_taxa=False):
+        arg_survive = CS >= cutoff
+        if keep_length:
+            nbytearr = self.bytearr.copy()
+            nbytearr[:,~arg_survive] = ord(replacement)
+            ngaparr = ~arg_survive + self.gaparr
+            if trim_taxa:
+                argt = ~np.all(ngaparr, axis=1)
+                return np.compress(argt, nbytearr, axis=0)
+            else:
+                return nbytearr 
+        else:
+            if trim_taxa:
+                gaparr_survive = np.compress(arg_survive, self.gaparr, axis=1)
+                argt = ~np.all(np.compress(arg_survive, self.gaparr, axis=1), axis=1)
+                return np.compress(argt, np.compress(arg_survive, self.bytearr, axis=1), axis=0)
+            else:
+                return np.compress(arg_survive, self.bytearr, axis=1)
 
-    def get_residue_masked_msa(self, scr_type, cutoff, replacement, keep_length=True, quiet=True):
+    def get_residue_masked_msa(self, scr_type, cutoff, replacement='-', keep_length=True, trim_taxa=False, quiet=True):
         RS = self.get(scr_type)
         if np.any(RS) is not None:
-            return Seq.parse_seqarr(self.mask_res(RS, cutoff, replacement, keep_length=keep_length), self.tags)
+            return Seq.parse_seqarr(self.mask_res(RS, cutoff, replacement=replacement, keep_length=keep_length, trim_taxa=trim_taxa), self.tags)
 
-    def get_column_masked_msa(self, scr_type, cutoff,quiet=True):
+    def get_column_masked_msa(self, scr_type, cutoff, replacement='-', keep_length=False, trim_taxa=False, quiet=True):
         CS = self.get_column_score(scr_type)
         if np.any(CS) is not None:
-            return Seq.parse_seqarr(self.mask_col(CS, cutoff), self.tags)
+            return Seq.parse_seqarr(self.mask_col(CS, cutoff, replacement=replacement, keep_length=keep_length, trim_taxa=trim_taxa), self.tags)
 
-    def write_residue_masked_msa(self, fh, scr_type, cutoff, replacement, outfmt='fasta', keep_length=True, quiet=True):
+    def write_residue_masked_msa(
+                                self, fh, scr_type, cutoff,
+                                replacement='-', outfmt='fasta',
+                                keep_length=True, trim_taxa=False, quiet=True
+                                ):
         if fh:
-            msa = self.get_residue_masked_msa(scr_type, cutoff, replacement, keep_length=keep_length)
+            msa = self.get_residue_masked_msa(scr_type, cutoff, replacement=replacement, keep_length=keep_length, trim_taxa=trim_taxa)
             if msa:
                 msa.write(fh, outfmt=outfmt)
                 if not quiet:
@@ -550,9 +582,13 @@ class ARELIA(dict):
                 self._res_msa_saved = False    
             fh.close()
 
-    def write_column_masked_msa(self, fh, scr_type, cutoff, outfmt='fasta', quiet=True):
+    def write_column_masked_msa(
+                                self, fh, scr_type, cutoff,
+                                replacement='-', outfmt='fasta',
+                                keep_length=False, trim_taxa=False, quiet=True
+                                ):
         if fh:
-            msa = self.get_column_masked_msa(scr_type, cutoff, quiet=True)
+            msa = self.get_column_masked_msa(scr_type, cutoff, replacement=replacement, keep_length=keep_length, trim_taxa=trim_taxa, quiet=True)
             if msa:
                 msa.write(fh, outfmt=outfmt)
                 if not quiet:
@@ -568,7 +604,8 @@ class ARELIA(dict):
             cutoff=0.3, gap_cut_accept=.7, gap_cut_cons=.3, gap_penalty=-5.0,
             scr_type_res='s1', scr_type_col='s2', quiet=False, 
             msa_col=None, msa_res=None, scr_col=None, scr_res=None, write=False,
-            infmt = 'fasta', outfmt='fasta', replacement='-', keep_length=False
+            infmt = 'fasta', outfmt='fasta', replacement='-',
+            keep_length=False, trim_taxa = False
             
         ):
         if msa_col==None and msa_res==None and scr_col==None and scr_res==None:
@@ -593,9 +630,17 @@ class ARELIA(dict):
         if 's1' in arelia or 's2' in arelia:
             arelia.cal_residue_score(W, gap_penalty=gap_penalty)
             if write:
-                arelia.write_residue_masked_msa(msa_res, 'r'+scr_type_res, cutoff, replacement, outfmt=outfmt, keep_length=keep_length, quiet=quiet)
+                arelia.write_residue_masked_msa(
+                                                msa_res, 'r'+scr_type_res, cutoff,
+                                                replacement=replacement, outfmt=outfmt,
+                                                keep_length=keep_length, trim_taxa=trim_taxa, quiet=quiet
+                                                )
                 arelia.write_residue_score(scr_res, 'r'+scr_type_res, quiet=quiet)
-                arelia.write_column_masked_msa(msa_col, 'r'+scr_type_col, cutoff, outfmt=outfmt, quiet=quiet)
+                arelia.write_column_masked_msa(
+                                                msa_col, 'r'+scr_type_col, cutoff,
+                                                replacement=replacement, outfmt=outfmt,
+                                                keep_length=keep_length, trim_taxa=trim_taxa, quiet=quiet
+                                                )
                 arelia.write_column_score(scr_col, 'r'+scr_type_col, quiet=quiet)
 
         return arelia    
@@ -640,8 +685,9 @@ if __name__ == '__main__':
         choices=['fasta','fas','mfa','phylip','csv','tsv'])
     parser.add_argument('-replacement', metavar='S1', help='by which unreliable residues will be replaced. default=-',default='-')
     parser.add_argument('--keep_length', help='keep the column length of an input MSA.',action='store_true')
+    parser.add_argument('--trim_taxa', help='remove taxa with no remaining residues.',action='store_true')
     parser.add_argument('--quiet', help='be quiet.',action='store_true')
-    parser.add_argument('--version', help='show version.',action='version', version='0.1')
+    parser.add_argument('--version', help='show version.',action='version', version='0.2.0')
     args = parser.parse_args()
 
     def mkdir_p(path):
@@ -695,6 +741,7 @@ if __name__ == '__main__':
             infmt = args.infmt,
             outfmt = args.outfmt,
             keep_length = args.keep_length,
+            trim_taxa = args.trim_taxa,
             replacement = args.replacement,
             quiet = args.quiet,
             write = True
@@ -715,6 +762,7 @@ if __name__ == '__main__':
                 infmt = args.infmt,
                 outfmt = args.outfmt,
                 keep_length = args.keep_length,
+                trim_taxa = args.trim_taxa,
                 replacement = args.replacement,
                 quiet = args.quiet,
                 write = True
