@@ -564,7 +564,7 @@ class ARELIA(dict):
 
     @classmethod
     def go(
-            cls, seqtxt, W, weighting=False,
+            cls, seqtxt, W=[5,10,15,30], weighting=False,
             cutoff=0.3, gap_cut_accept=.7, gap_cut_cons=.3, gap_penalty=-5.0,
             scr_type_res='s1', scr_type_col='s2', quiet=False, 
             msa_col=None, msa_res=None, scr_col=None, scr_res=None, write=False,
@@ -591,7 +591,7 @@ class ARELIA(dict):
                                 )
 
         if 's1' in arelia or 's2' in arelia:
-            arelia.cal_residue_score(W=W, gap_penalty=gap_penalty)
+            arelia.cal_residue_score(W, gap_penalty=gap_penalty)
             if write:
                 arelia.write_residue_masked_msa(msa_res, 'r'+scr_type_res, cutoff, replacement, outfmt=outfmt, keep_length=keep_length, quiet=quiet)
                 arelia.write_residue_score(scr_res, 'r'+scr_type_res, quiet=quiet)
