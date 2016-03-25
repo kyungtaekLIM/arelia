@@ -687,7 +687,7 @@ if __name__ == '__main__':
     parser.add_argument('--keep_length', help='keep the column length of an input MSA.',action='store_true')
     parser.add_argument('--trim_taxa', help='remove taxa with no remaining residues.',action='store_true')
     parser.add_argument('--quiet', help='be quiet.',action='store_true')
-    parser.add_argument('--version', help='show version.',action='version', version='0.2.0')
+    parser.add_argument('--version', help='show version.',action='version', version='0.2.1')
     args = parser.parse_args()
 
     def mkdir_p(path):
@@ -727,6 +727,13 @@ if __name__ == '__main__':
         if filename:
             mkdir_p(os.path.split(filename)[0])
             return open(filename, mode)
+
+    def join_if_exists(*args):
+        try:
+            return os.path.join(*args)
+        except:
+            return None
+
     
     if os.path.isfile(args.input):
     
@@ -755,10 +762,10 @@ if __name__ == '__main__':
                 open(filename).read(), args.W, weighting=True,
                 cutoff=args.cutoff, gap_cut_accept=.7, gap_cut_cons=.3, gap_penalty=args.gap,
                 scr_type_col=args.scr_type_col,
-                scr_res = open_if_exists(os.path.join(args.scr_res, stem, basename+'.res.scr'),'w'),
-                scr_col = open_if_exists(os.path.join(args.scr_col, stem, basename+'.col.scr'),'w'),
-                msa_res = open_if_exists(os.path.join(args.msa_res, stem, basename+'.res.'+args.outfmt),'w'),
-                msa_col = open_if_exists(os.path.join(args.msa_col, stem, basename+'.col.'+args.outfmt),'w'),
+                scr_res = open_if_exists(join_if_exists(args.scr_res, stem, basename+'.res.scr'),'w'),
+                scr_col = open_if_exists(join_if_exists(args.scr_col, stem, basename+'.col.scr'),'w'),
+                msa_res = open_if_exists(join_if_exists(args.msa_res, stem, basename+'.res.'+args.outfmt),'w'),
+                msa_col = open_if_exists(join_if_exists(args.msa_col, stem, basename+'.col.'+args.outfmt),'w'),
                 infmt = args.infmt,
                 outfmt = args.outfmt,
                 keep_length = args.keep_length,
