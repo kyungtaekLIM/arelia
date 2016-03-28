@@ -28,7 +28,7 @@ python /path/to/your/arelia.py -h
 
 Get a residue-masked MSA.
 ```
-arelia.py MSA_FILE_IN > MSA_FILE_OUT
+arelia.py MSA_FILE_IN --quiet > MSA_FILE_OUT
 ```
 or
 ```
@@ -48,6 +48,11 @@ arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT -scr_res SCORE_FILE_OUT
 Process MSA files in a directory recursively.
 ```
 arelia.py MSA_DIR_IN -msa_res MSA_DIR_OUT -scr_res SCORE_DIR_OUT
+```
+
+Set cutoff (for alignment masking), gap penalty, and window sizes.
+```
+arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT -cutoff 0.3 -gap -5.0 -W 5 10 15 30
 ```
 
 Set input and output formats.
