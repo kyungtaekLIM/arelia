@@ -92,14 +92,15 @@ class Seq(list):
     def add(self, tag, seq):
         self.append(_Seq(tag, seq))
     
-    def write(self, oh, outfmt='fasta', tag_max_len=10, line_len=60, block_len=10):
+    def write(self, oh, outfmt='fasta', max_tag_len=10, line_len=60, block_len=10):
         outfmt = outfmt.lower()
         if outfmt in ['phylip']:
             seqs = []
             tags = []
             max_seq_len = 0
+            seq_offset = max_tag_len + 3
             for o in self:
-                tags.append(o.tag[:tag_max_len])
+                tags.append(o.tag[:max_tag_len])
                 curr_seq_len = len(o.seq)
                 if curr_seq_len > max_seq_len:
                     max_seq_len = curr_seq_len
@@ -117,9 +118,9 @@ class Seq(list):
             for i in range(int(np.ceil(float(max_seq_len) / line_len))):
                 for j in range(len(self)):
                     if i:
-                        oh.write(' '*13)
+                        oh.write(' '*seq_offset)
                     else:
-                        oh.write(tags[j]+' '*(13-len(tags[j])))
+                        oh.write(tags[j]+' '*(seq_offset-len(tags[j])))
                     oh.write(' '.join(seqs[j][i*block_num:(i+1)*block_num])+'\n')
                 oh.write('\n')
 
