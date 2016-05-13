@@ -688,7 +688,7 @@ if __name__ == '__main__':
     parser.add_argument('--keep_length', help='keep the column length of an input MSA.',action='store_true')
     parser.add_argument('--trim_taxa', help='remove taxa with no remaining residues.',action='store_true')
     parser.add_argument('--quiet', help='be quiet.',action='store_true')
-    parser.add_argument('--version', help='show version.',action='version', version='0.2.1')
+    parser.add_argument('--version', help='show version.',action='version', version='0.2.2')
     args = parser.parse_args()
 
     def mkdir_p(path):
