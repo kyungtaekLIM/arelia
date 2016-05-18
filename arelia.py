@@ -754,8 +754,11 @@ if __name__ == '__main__':
             quiet = args.quiet,
             write = True
         )
-        
+    
     elif os.path.isdir(args.input):    
+        if not args.scr_res and not args.scr_col and not args.msa_res and not args.msa_col:
+            parser.error('%s is a dir. at least one output dir is required. \'arelia.py -h\' will show examples ' % args.input)
+        
         for filename, subfilename in Files(args.input, depth=float('inf')):
             stem, basename = os.path.split(subfilename)
         
