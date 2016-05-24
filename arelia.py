@@ -31,6 +31,36 @@ odd_ratio = np.array([
     [.9081,.4357,.4065,.3472,.8102,.4902,.4002,.3012,.3333,2.6882,1.4342,.4712,1.3310,.8207,.3876,.5650,.9091,.3968,.6127,3.7809]
 ])
 
+class Path:
+    @staticmethod
+    def mkdir_p(path):
+        if path:
+            try:    
+                os.makedirs(path)
+            except OSError as exc:
+                if exc.errno == errno.EEXIST and os.path.isdir(path):
+                    pass
+                else:
+                    raise
+
+    @staticmethod
+    def listfiles_r(inpath, exts=[], depth_count=1):
+        for filename in os.listdir(inpath):
+            filepath = os.path.join(inpath, filename)
+            if os.path.isdir(filepath):
+                for f in Path.listfiles_r(filepath, exts=exts, depth_count=depth_count+1):
+                    yield f
+            elif os.path.isfile(filepath):
+                if exts and not os.path.splitext(filepath)[1] in exts:
+                    continue
+                subpath = filename
+                stem = os.path.split(filepath)[0]
+                for c in range(depth_count-1):
+                    stem, base = os.path.split(stem)
+                    subpath = os.path.join(base, subpath)
+                yield filepath, subpath
+
+
 class _Seq:
     def __init__(self, tag, seq):
         self.tag = tag
@@ -688,45 +718,13 @@ if __name__ == '__main__':
     parser.add_argument('--keep_length', help='keep the column length of an input MSA.',action='store_true')
     parser.add_argument('--trim_taxa', help='remove taxa with no remaining residues.',action='store_true')
     parser.add_argument('--quiet', help='be quiet.',action='store_true')
-    parser.add_argument('--version', help='show version.',action='version', version='0.2.2')
+    parser.add_argument('--version', help='show version.',action='version', version='0.2.3')
     args = parser.parse_args()
 
-    def mkdir_p(path):
-        if path:
-            try:    
-                os.makedirs(path)
-            except OSError as exc:
-                if exc.errno == errno.EEXIST and os.path.isdir(path):
-                    pass
-                else:
-                    raise
-
-    class Files(list):
-        def __init__(self, inpath, exts=[], depth=1):
-            self.extend(self.make(inpath, exts = exts, depth = depth))
-
-        def make(self, inpath, exts=[], depth = 1, depthCount = 1):
-            if depthCount > depth:
-                return None
-            l=[]
-            for filename in os.listdir(inpath):
-                filepath = os.path.join(inpath, filename)
-                if os.path.isdir(filepath):
-                    l.extend(self.make(filepath, exts=exts, depth=depth, depthCount=depthCount+1))
-                else:
-                    if exts and not os.path.splitext(addr)[1] in exts:
-                        continue
-                    subpath = filename
-                    stem = os.path.split(filepath)[0]
-                    for c in range(depthCount-1):
-                        stem, base = os.path.split(stem)
-                        subpath = os.path.join(base, subpath)
-                    l.append([filepath, subpath])
-            return l
 
     def open_if_exists(filename, mode):
         if filename:
-            mkdir_p(os.path.split(filename)[0])
+            Path.mkdir_p(os.path.split(filename)[0])
             return open(filename, mode)
 
     def join_if_exists(*args):
@@ -759,7 +757,7 @@ if __name__ == '__main__':
         if not args.scr_res and not args.scr_col and not args.msa_res and not args.msa_col:
             parser.error('%s is a dir. at least one output dir is required. \'arelia.py -h\' will show examples ' % args.input)
         
-        for filename, subfilename in Files(args.input, depth=float('inf')):
+        for filename, subfilename in Path.listfiles_r(args.input):
             stem, basename = os.path.split(subfilename)
         
             ARELIA.go(
