@@ -271,103 +271,109 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False):
     return ret
 
 
-def maparr(arr, keys, values):
-    '''
-    Maps a given numpy array using given keys and values. Returns a mapped numpy array.
+class Profile:
+    @staticmethod
+    def maparr(arr, keys, values):
+        '''
+        Maps a given numpy array using given keys and values. Returns a mapped numpy array.
      
-    Parameters
-        arr    - a numpy array
-        keys   - an 1D numpy array
-        values - an 1D numpy array
+        Parameters
+            arr    - a numpy array
+            keys   - an 1D numpy array
+            values - an 1D numpy array
      
-    Returns
-        the mapped ndarray
-    '''
-    arg = keys.argsort()
-    return values[arg][np.searchsorted(keys[arg], arr.ravel())].reshape(arr.shape)
+        Returns
+            the mapped ndarray
+        '''
+        arg = keys.argsort()
+        return values[arg][np.searchsorted(keys[arg], arr.ravel())].reshape(arr.shape)
 
 
-def intarr2freqs(intarr, max_int, weights=None):
-    '''
-    Calculates weighted or unweighted frequencies of integers in individual columns (axis 1).
+    @staticmethod
+    def intarr2freqs(intarr, max_int, weights=None):
+        '''
+        Calculates weighted or unweighted frequencies of integers in individual columns (axis 1).
 
-    Parameters:
-        intarr      - a 2D integer numpy array
-        max_int  - integers < max_int will be counted
-        weights  - none or a 1D numpy array with weights of the same length to intarr axis 0
+        Parameters:
+            intarr   - a 2D integer numpy array
+            max_int  - integers < max_int will be counted
+            weights  - none or a 1D numpy array with weights of the same length to intarr axis 0
 
-    Returns
-        2D numpy array with (weighted) integer counts binned by axis-0
-    '''
-    seqnum, seqlen = intarr.shape
-    rest_seqnum = seqnum - 1.0
+        Returns
+            2D numpy array with (weighted) integer counts binned by axis-0
+        '''
+        seqnum, seqlen = intarr.shape
+        rest_seqnum = seqnum - 1.0
 
-    freq = np.empty((seqnum, max_int, seqlen), dtype=np.float64)
+        freq = np.empty((seqnum, max_int, seqlen), dtype=np.float64)
+   
+        if np.any(weights) != None:
+            sw_means = (weights.sum()-weights) / rest_seqnum
 
-    if np.any(weights) != None:
-        sw_means = (weights.sum()-weights) / rest_seqnum
+            if np.any(sw_means==0):
+                return intarr2freqs(intarr, max_int, weights=None)            
 
-        if np.any(sw_means==0):
-            return intarr2freqs(intarr, max_int, weights=None)            
+            for i in range(max_int):
+                warr = (intarr == i) * weights[:,None]
+                freq[:,i] = (np.sum(warr, axis=0) - warr) / sw_means[:,None]
+        else:
+            for i in range(max_int):
+                warr = (intarr == i)
+                freq[:,i] = (np.sum(warr, axis=0) - warr) / rest_seqnum
 
-        for i in range(max_int):
-            warr = (intarr == i) * weights[:,None]
-            freq[:,i] = (np.sum(warr, axis=0) - warr) / sw_means[:,None]
-    else:
-        for i in range(max_int):
-            warr = (intarr == i)
-            freq[:,i] = (np.sum(warr, axis=0) - warr) / rest_seqnum
-
-    return freq
+        return freq
 
 
-def freqs2scores(intarr, gaparr, freqs, scr_types = ['s1','s2'], gap_penalty=-5.0):
-    seqnum, seqlen = intarr.shape
-    rest_seqnum = seqnum - 1.0
+    @staticmethod
+    def intarr2scores(intarr, gaparr, max_int, scr_types = ('s1'), gap_penalty=-5.0, weights=None):
+        seqnum, seqlen = intarr.shape
+        rest_seqnum = seqnum - 1.0
+        
+        freqs = Profile.intarr2freqs(intarr, max_int, weights=weights)
 
-    if 's1' in scr_types:
-        p1 = np.empty(intarr.shape)
-        p1.fill(gap_penalty)
-    if 's2' in scr_types:
-        p2 = np.empty(intarr.shape)
-        p2.fill(gap_penalty)
-
-    for i in range(freqs.shape[0]):
-        IF = ~(gaparr[i])
-        nfreq = np.compress(IF, freqs[i], axis=1) 
-        Ng = rest_seqnum - nfreq.sum(axis=0) #weighted gap number
-        nfreq += Ng * bprob[:, None]
-        s = np.log(np.sum(np.take(odd_ratio, intarr[i,IF], axis=1) * nfreq, axis=0) / rest_seqnum)
         if 's1' in scr_types:
-            p1[i][IF] = s
+            p1 = np.empty(intarr.shape)
+            p1.fill(gap_penalty)
         if 's2' in scr_types:
-            p2[i][IF] = s + (gap_penalty/rest_seqnum)*Ng
+            p2 = np.empty(intarr.shape)
+            p2.fill(gap_penalty)
 
-    r = []
-    for each in scr_types:
-        if each == 's1':
-            r.append((each, p1))
-        if each == 's2':
-            r.append((each, p2))
-    return r
+        for i in range(freqs.shape[0]):
+            IF = ~(gaparr[i])
+            nfreq = np.compress(IF, freqs[i], axis=1) 
+            Ng = rest_seqnum - nfreq.sum(axis=0) #weighted gap number
+            nfreq += Ng * bprob[:, None]
+            s = np.log(np.sum(np.take(odd_ratio, intarr[i,IF], axis=1) * nfreq, axis=0) / rest_seqnum)
+            if 's1' in scr_types:
+                p1[i][IF] = s
+            if 's2' in scr_types:
+                p2[i][IF] = s + (gap_penalty/rest_seqnum)*Ng
 
+        r = []
+        for each in scr_types:
+            if each == 's1':
+                r.append((each, p1))
+            if each == 's2':
+                r.append((each, p2))
+        return r
 
-def intarr2weight(intarr):
-    '''
-    Return Position-Specific Sequence Weights
+    @staticmethod
+    def intarr2weight(intarr):
+        '''
+        Return Position-Specific Sequence Weights
      
-    Parameters
-        intarr - an 2-dimensional numpy integer array (< 100)
+        Parameters
+            intarr - an 2-dimensional numpy integer array (< 100)
      
-    Returns
-        an 1-dimensional numpy array containing weights for sequences
-    '''
+        Returns
+            an 1-dimensional numpy array containing weights for sequences
+        '''
 
-    us, inverse, counts = unique(intarr+np.arange(0, intarr.shape[1]*100, 100), return_inverse=True, return_counts=True)
-    colind, inverse2ind, col_counts = unique((us/100).astype(np.int64), return_inverse=True, return_counts=True) 
-    col_w = 1.0 / col_counts
-    char_w = 1.0 / counts
-    return (col_w[inverse2ind] * char_w)[inverse].reshape(intarr.shape).sum(axis=1)
+        us, inverse, counts = unique(intarr+np.arange(0, intarr.shape[1]*100, 100), return_inverse=True, return_counts=True)
+        colind, inverse2ind, col_counts = unique((us/100).astype(np.int64), return_inverse=True, return_counts=True) 
+        col_w = 1.0 / col_counts
+        char_w = 1.0 / counts
+        return (col_w[inverse2ind] * char_w)[inverse].reshape(intarr.shape).sum(axis=1)
 
 def sliding_window1d(arr, ws):
     '''
@@ -437,7 +443,7 @@ class ARELIA(dict):
         
         #dtype='S' is necessary because python3 string format is unicode.
         self.bytearr = np.array(seqs, dtype='S').view(np.byte) 
-        self.intarr = maparr(self.bytearr, self.ele_bytes, self.ele_ints)
+        self.intarr = Profile.maparr(self.bytearr, self.ele_bytes, self.ele_ints)
         self.alnnum, self.alnlen = self.bytearr.shape
         self.gaparr = self.intarr == self.res_len
 
@@ -498,17 +504,18 @@ class ARELIA(dict):
         gapfrac = self.gaparr.sum(axis=0) / float(self.alnnum)
         self.cons_cols = gapfrac < gap_cut_cons
         self.accept_cols = gapfrac < gap_cut_accept
-        intarr_acc = np.compress(self.accept_cols, self.intarr, axis=1)
         
         weights = None
         if weighting and np.count_nonzero(self.cons_cols) > 0:
-            weights = intarr2weight(np.compress(self.cons_cols, self.intarr, axis=1))
+            weights = Profile.intarr2weight(np.compress(self.cons_cols, self.intarr, axis=1))
         
-        SCR = freqs2scores(
-                    intarr_acc,
+        SCR = Profile.intarr2scores(
+                    np.compress(self.accept_cols, self.intarr, axis=1),
                     np.compress(self.accept_cols, self.gaparr, axis=1),
-                    intarr2freqs(intarr_acc, self.res_len, weights=weights),
-                    scr_types=scr_types, gap_penalty=gap_penalty
+                    self.res_len,
+                    scr_types=scr_types,
+                    gap_penalty=gap_penalty,
+                    weights = weights
                 )
         
         for scr_type, score in SCR:
@@ -657,7 +664,7 @@ class ARELIA(dict):
                                 gap_penalty=gap_penalty,
                                 scr_types=scr_types
                                 )
-
+        
         if 's1' in arelia or 's2' in arelia:
             arelia.cal_residue_score(W, gap_penalty=gap_penalty)
             if write:
@@ -718,7 +725,7 @@ if __name__ == '__main__':
     parser.add_argument('--keep_length', help='keep the column length of an input MSA.',action='store_true')
     parser.add_argument('--trim_taxa', help='remove taxa with no remaining residues.',action='store_true')
     parser.add_argument('--quiet', help='be quiet.',action='store_true')
-    parser.add_argument('--version', help='show version.',action='version', version='0.2.3')
+    parser.add_argument('--version', help='show version.',action='version', version='0.2.4')
     args = parser.parse_args()
 
 
