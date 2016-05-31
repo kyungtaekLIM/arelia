@@ -825,10 +825,10 @@ class ARELIA(dict):
             keep_length=False, trim_taxa=False,
             write=False, quiet=False,
      ):
-        if (msa_col is None and
-            msa_res is None and
-            scr_col is None and
-            scr_res is None):
+        if (
+            msa_col is None and msa_res is None and
+            scr_col is None and scr_res is None
+        ):
 
             # set msa_res as stdout when no print-out options are given.
             msa_res = sys.stdout
