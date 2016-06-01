@@ -28,7 +28,7 @@ python /path/to/your/arelia.py -h
 
 Get a residue-masked MSA.
 ```
-arelia.py MSA_FILE_IN --quiet > MSA_FILE_OUT
+arelia.py MSA_FILE_IN > MSA_FILE_OUT
 ```
 or
 ```

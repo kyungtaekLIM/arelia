@@ -881,7 +881,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='''examples:
   -get a residue-masked MSA.
-    arelia.py MSA_FILE_IN --quiet > MSA_FILE_OUT
+    arelia.py MSA_FILE_IN > MSA_FILE_OUT
    or
     arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT
 
