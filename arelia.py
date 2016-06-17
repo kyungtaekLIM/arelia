@@ -239,42 +239,55 @@ class Seq(list):
     def add(self, tag, seq):
         self.append(_Seq(tag, seq))
 
+    @staticmethod
+    def chunks(S, n):
+        return [S[c:c+n] for c in range(0, len(S), n)]
+
+    def write_phylip(
+        self, oh,
+        max_tag_len=10, line_len=60, block_len=10
+    ):
+        seq_len = len(self[0].seq)
+        seq_num = len(self)
+        seq_offset = max_tag_len + 3
+        oh.write(' %s %s\n' % (seq_num, seq_len))
+        FROM = 0
+        for i in range(int(np.ceil(float(seq_len) / line_len))):
+            for j in range(seq_num):
+                if i:
+                    oh.write(' '*seq_offset)
+                else:
+                    tag = self[j].tag[:max_tag_len]
+                    oh.write(tag+' '*(seq_offset-len(tag)))
+                seq = self[j].seq[FROM:FROM+line_len]
+                oh.write(' '.join(self.chunks(seq, block_len))+'\n')
+            FROM += line_len
+            oh.write('\n')
+
+    def write_fasta(self, oh, line_len=60):
+        for ob in self:
+            l = '>'+ob.tag+'\n'
+            i = 0
+            while 1:
+                frag = ob.seq[i:i+line_len]
+                if not frag:
+                    break
+                l += frag+'\n'
+                i += line_len
+            oh.write(l)
+
     def write(
         self, oh, outfmt='fasta',
         max_tag_len=10, line_len=60, block_len=10
     ):
         outfmt = outfmt.lower()
         if outfmt == 'phylip':
-            seqs = []
-            tags = []
-            max_seq_len = 0
-            seq_offset = max_tag_len + 3
-            for o in self:
-                tags.append(o.tag[:max_tag_len])
-                curr_seq_len = len(o.seq)
-                if curr_seq_len > max_seq_len:
-                    max_seq_len = curr_seq_len
-                count = 0
-                seq = []
-                while 1:
-                    frag = o.seq[count:count+block_len]
-                    if not frag:
-                        break
-                    seq.append(frag)
-                    count += block_len
-                seqs.append(seq)
-            oh.write(' %s %s\n' % (len(self), max_seq_len))
-            block_num = int(line_len/block_len)
-            for i in range(int(np.ceil(float(max_seq_len) / line_len))):
-                for j in range(len(self)):
-                    if i:
-                        oh.write(' '*seq_offset)
-                    else:
-                        oh.write(tags[j]+' '*(seq_offset-len(tags[j])))
-                    oh.write(
-                        ' '.join(seqs[j][i*block_num:(i+1)*block_num])+'\n'
-                        )
-                oh.write('\n')
+            self.write_phylip(
+                oh,
+                max_tag_len=max_tag_len,
+                line_len=line_len,
+                block_len=block_len
+            )
 
         elif outfmt == 'tsv':
             for ob in self:
@@ -285,16 +298,7 @@ class Seq(list):
                 oh.write(ob.tag+','+ob.seq+'\n')
 
         elif outfmt in ('fasta', 'fas', 'mfa', 'fna'):
-            for ob in self:
-                l = '>'+ob.tag+'\n'
-                i = 0
-                while 1:
-                    frag = ob.seq[i:i+line_len]
-                    if not frag:
-                        break
-                    l += frag+'\n'
-                    i += line_len
-                oh.write(l)
+            self.write_fasta(oh, line_len=line_len)
 
     @classmethod
     def parse_string(cls, string, infmt='fasta'):
@@ -965,7 +969,7 @@ if __name__ == '__main__':
     parser.add_argument('--quiet', help='be quiet.', action='store_true')
     parser.add_argument(
         '--version', help='show version.',
-        action='version', version='0.2.5'
+        action='version', version='0.2.6'
     )
     args = parser.parse_args()
 
