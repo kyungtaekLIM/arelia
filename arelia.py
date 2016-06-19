@@ -418,40 +418,40 @@ class Profile:
         return V[arg][np.searchsorted(K[arg], arr.ravel())].reshape(arr.shape)
 
     @staticmethod
-    def intarr2freqs(intarr, max_int, weights=None):
+    def intarr2fracs(intarr, max_int, weights=None):
         '''
-        Calculates weighted or unweighted frequencies of integers
-        in individual columns (axis 1).
+        Calculates weighted or unweighted fractions of integers
+        in individual columns (axis 0).
 
-        Parameters:
+        Parameters
             intarr   - a 2D integer numpy array
             max_int  - integers < max_int will be counted
             weights  - none or a 1D numpy array with weights of
                        the same length to intarr axis 0
 
         Returns
-            2D numpy array with (weighted) integer counts binned by axis-0
+            2D numpy array with fractions of integers binned by axis 0
         '''
         seqnum, seqlen = intarr.shape
-        rest_seqnum = seqnum - 1.0
 
-        freq = np.empty((seqnum, max_int, seqlen), dtype=np.float64)
+        frac = np.empty((seqnum, max_int, seqlen), dtype=np.float64)
 
         if np.any(weights) is not None:
-            sw_means = (weights.sum()-weights) / rest_seqnum
+            sw_means = (weights.sum()-weights)
 
             if np.any(sw_means == 0):
-                return Profile.intarr2freqs(intarr, max_int, weights=None)
+                return Profile.intarr2fracs(intarr, max_int, weights=None)
 
             for i in range(max_int):
                 warr = (intarr == i) * weights[:, None]
-                freq[:, i] = (np.sum(warr, axis=0) - warr) / sw_means[:, None]
+                frac[:, i] = (np.sum(warr, axis=0) - warr) / sw_means[:, None]
         else:
+            rest_seqnum = seqnum - 1.0
             for i in range(max_int):
                 warr = (intarr == i)
-                freq[:, i] = (np.sum(warr, axis=0) - warr) / rest_seqnum
+                frac[:, i] = (np.sum(warr, axis=0) - warr) / rest_seqnum
 
-        return freq
+        return frac
 
     @staticmethod
     def intarr2scores(
@@ -459,9 +459,8 @@ class Profile:
         scr_types=('s1'), gap_penalty=-5.0, weights=None
     ):
         seqnum, seqlen = intarr.shape
-        rest_seqnum = seqnum - 1.0
 
-        freqs = Profile.intarr2freqs(intarr, max_int, weights=weights)
+        fracs = Profile.intarr2fracs(intarr, max_int, weights=weights)
 
         if 's1' in scr_types:
             p1 = np.empty(intarr.shape)
@@ -470,18 +469,18 @@ class Profile:
             p2 = np.empty(intarr.shape)
             p2.fill(gap_penalty)
 
-        for i in range(freqs.shape[0]):
+        for i in range(fracs.shape[0]):
             IF = ~(gaparr[i])
-            nfreq = np.compress(IF, freqs[i], axis=1)
-            Ng = rest_seqnum - nfreq.sum(axis=0)  # weighted gap number
-            nfreq += Ng * bprob[:, None]
+            nfrac = np.compress(IF, fracs[i], axis=1)
+            Ng = 1.0 - nfrac.sum(axis=0)  # weighted gap number
+            nfrac += Ng * bprob[:, None]
             s = np.log(np.sum(
-                np.take(odd_ratio, intarr[i, IF], axis=1) * nfreq,
-                axis=0) / rest_seqnum)
+                np.take(odd_ratio, intarr[i, IF], axis=1) * nfrac, axis=0)
+            )
             if 's1' in scr_types:
                 p1[i][IF] = s
             if 's2' in scr_types:
-                p2[i][IF] = s + (gap_penalty/rest_seqnum)*Ng
+                p2[i][IF] = s + gap_penalty * Ng
 
         r = []
         for each in scr_types:
@@ -969,7 +968,7 @@ if __name__ == '__main__':
     parser.add_argument('--quiet', help='be quiet.', action='store_true')
     parser.add_argument(
         '--version', help='show version.',
-        action='version', version='0.2.6'
+        action='version', version='0.3.0'
     )
     args = parser.parse_args()
 
