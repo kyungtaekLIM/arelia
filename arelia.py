@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import os
 import sys
 import numpy as np
 from numpy.lib.stride_tricks import as_strided
@@ -141,6 +142,7 @@ class Path:
     @staticmethod
     def mkdir_p(path):
         if path:
+            import errno
             try:
                 os.makedirs(path)
             except OSError as exc:
@@ -877,8 +879,6 @@ class ARELIA(dict):
 
 if __name__ == '__main__':
     import argparse
-    import os
-    import errno
 
     # arguments
     parser = argparse.ArgumentParser(
@@ -968,7 +968,7 @@ if __name__ == '__main__':
     parser.add_argument('--quiet', help='be quiet.', action='store_true')
     parser.add_argument(
         '--version', help='show version.',
-        action='version', version='0.3.0'
+        action='version', version='0.3.1'
     )
     args = parser.parse_args()
 
