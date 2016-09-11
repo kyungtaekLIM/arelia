@@ -141,6 +141,9 @@ odd_ratio = np.array([
 class Path:
     @staticmethod
     def mkdir_p(path):
+        '''
+        Make a diretory if not exists.
+        '''
         if path:
             import errno
             try:
@@ -153,6 +156,10 @@ class Path:
 
     @staticmethod
     def listfiles_r(inpath, exts=[], depth_count=1):
+        '''
+        Iterate over files in a given directory recursively.
+        `exts` limits the result with extensions of the files.
+        '''
         for filename in os.listdir(inpath):
             filepath = os.path.join(inpath, filename)
             if os.path.isdir(filepath):
@@ -432,7 +439,7 @@ class Profile:
                        the same length to intarr axis 0
 
         Returns
-            2D numpy array with fractions of integers binned by axis 0
+            A 2D numpy array with fractions of integers binned by axis 0
         '''
         seqnum, seqlen = intarr.shape
 
@@ -460,6 +467,20 @@ class Profile:
         intarr, gaparr, max_int,
         scr_types=('s1'), gap_penalty=-5.0, weights=None
     ):
+        '''
+        Transform a given integer array to profiled scores
+
+        Parameters
+            intarr    - a 2D integer numpy array
+            gaparr    - a 2D boolean numpy array
+            max_int   - integers < max_int will be counted
+            scr_types - a tuple with score types('s1', 's2')
+            weights   - none or a 1D numpy array with weights of
+                       the same length to intarr axis 0
+
+        Returns
+            A 2D numpy array with profiled scores
+        '''
         seqnum, seqlen = intarr.shape
 
         fracs = Profile.intarr2fracs(intarr, max_int, weights=weights)
@@ -474,7 +495,7 @@ class Profile:
         for i in range(fracs.shape[0]):
             IF = ~(gaparr[i])
             nfrac = np.compress(IF, fracs[i], axis=1)
-            Ng = 1.0 - nfrac.sum(axis=0)  # weighted gap number
+            Ng = 1.0 - nfrac.sum(axis=0)  # weighted gap fraction
             nfrac += Ng * bprob[:, None]
             s = np.log(np.sum(
                 np.take(odd_ratio, intarr[i, IF], axis=1) * nfrac, axis=0)
@@ -495,13 +516,13 @@ class Profile:
     @staticmethod
     def intarr2weight(intarr):
         '''
-        Return Position-Specific Sequence Weights
+        Calculate Position-Specific Sequence Weights from `intarr`.
 
         Parameters
-            intarr - an 2-dimensional numpy integer array (< 100)
+            intarr - an 2D numpy integer array (< 100)
 
         Returns
-            an 1-dimensional numpy array containing weights for sequences
+            An 1D numpy float array containing weights for sequences
         '''
         shp = intarr.shape
         us, inv, counts = unique(
@@ -526,7 +547,7 @@ def sliding_window1d(arr, ws):
         ws  - an int for window size
 
     Returns
-        an 2-dimensional numpy array containing each window from arr
+        an 2D numpy array containing each window from `arr`
     '''
 
     strides = [arr.strides[0]] * 2
@@ -535,7 +556,7 @@ def sliding_window1d(arr, ws):
 
 def write_csv(fh, X, fmt, delimiter):
     '''
-    write 1D or 2D numpy array
+    Write 1D or 2D numpy array
 
     Parameters
         fh         - writable
@@ -555,15 +576,18 @@ def write_csv(fh, X, fmt, delimiter):
 
 
 class ARELIA(dict):
+    '''
+    Residue and gap characters in the form of 'byte'.
+    First 20 characters for amino acids,
+    the others for gap and ambiguous symbols.
+    '''
+
     # 20 amino acid residues
     res = 'ARNDCQEGHILKMFPSTWYV'
     gap_eles = 'BZX-*'
     # the number of amino acids
     res_len = len(res)
 
-    # residue and gap characters in the form of 'byte'.
-    # First 20 characters for amino acids,
-    # the others for gap and ambiguous symbols.
     # dtype='S' is necessary because python3 string format is unicode.
     ele_bytes = np.array([res+gap_eles], dtype='S').view(np.byte)
 
@@ -589,11 +613,14 @@ class ARELIA(dict):
             self.exit('ERROR: Insufficient sequence number.\n')
 
         # dtype='S' is necessary because python3 string format is unicode.
+        # transform sequences to a 2D integer array with bytes.
         self.bytearr = np.array(seqs, dtype='S').view(np.byte)
+        # map bytes into integers from 0 to 20
         self.intarr = Profile.maparr(
             self.bytearr, self.ele_bytes, self.ele_ints
         )
         self.alnnum, self.alnlen = self.bytearr.shape
+        # make a 2D boolean array that marks gaps
         self.gaparr = self.intarr == self.res_len
 
     def exit(self, mess=None):
@@ -604,7 +631,7 @@ class ARELIA(dict):
     @classmethod
     def multi_patch_filter(self, scores, W):
         '''
-        multi-patch filter
+        Multi-patch filter
 
         parameters
             scores: 1D numpy array with numeric values
