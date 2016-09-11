@@ -13,7 +13,7 @@ ARELIA is cross-platform software if the following dependency is satisfied.
 
 Download `arelia.py` somewhere in your `PATH`, and make `arelia.py` executable. For example, in UNIX-like systems:
 ```
-$ chmod +x /path/to/your/arelia.py
+chmod +x /path/to/your/arelia.py
 ```
 Check it by printing a help page.
 ```
