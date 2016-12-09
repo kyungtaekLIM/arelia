@@ -918,10 +918,13 @@ if __name__ == '__main__':
   -get a residue-masked MSA and residue reliability scores.
     arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT -scr_res SCORE_FILE_OUT
 
-  -process MSA files in a directory recursively.
+  -process all SA files in a directory recursively.
     arelia.py MSA_DIR_IN -msa_res MSA_DIR_OUT -scr_res SCORE_DIR_OUT
 
-  -set input and output formats.
+  -set a gap penalty, window sizes, and cutoff (residues with scores < cutoff will be masked).
+    arelia.py MSA_FILE_IN -msa_res MSA_FILE_OUT -gap -5.0 -W 5 10 15 30 -cutoff 0.3
+
+  -set input and output MSA formats.
     arelia.py MSA_DIR_IN -msa_res MSA_DIR_OUT -infmt fasta -outfmt phylip
 
 ''',
@@ -995,7 +998,7 @@ if __name__ == '__main__':
     parser.add_argument('--quiet', help='be quiet.', action='store_true')
     parser.add_argument(
         '--version', help='show version.',
-        action='version', version='0.3.1'
+        action='version', version='0.3.2'
     )
     args = parser.parse_args()
 
