@@ -463,7 +463,7 @@ class Profile:
         return frac
 
     @staticmethod
-    def intarr2scores(
+    def intarr2scr(
         intarr, gaparr, max_int,
         scr_types=('s1'), gap_penalty=-5.0, weights=None
     ):
@@ -658,7 +658,7 @@ class ARELIA(dict):
             RS += sliding_window1d(wS[:-d, d:].sum(axis=-1), w).max(axis=-1)/w
         return RS / len(W)
 
-    def get_score_types(self):
+    def get_scr_types(self):
         keys = []
         for key in self:
             if key[0] == 's':
@@ -672,7 +672,7 @@ class ARELIA(dict):
                 keys.append(key)
         return keys
 
-    def cal_profile_score(
+    def cal_profile_scr(
         self, weighting=True,
         gap_cut_accept=.7, gap_cut_cons=.3, gap_penalty=-5.0,
         scr_types=['s1']
@@ -688,7 +688,7 @@ class ARELIA(dict):
                 np.compress(self.cons_cols, self.intarr, axis=1)
                 )
 
-        SCR = Profile.intarr2scores(
+        SCR = Profile.intarr2scr(
                     np.compress(self.accept_cols, self.intarr, axis=1),
                     np.compress(self.accept_cols, self.gaparr, axis=1),
                     self.res_len,
@@ -704,7 +704,7 @@ class ARELIA(dict):
 
     def cal_res_scr(self, W, gap_penalty=-5.0):
         arg = ~self.gaparr + self.cons_cols  # set patch-fitered positions
-        for scr_type in self.get_score_types():
+        for scr_type in self.get_scr_types():
             rscr_type = 'r'+scr_type
             self[rscr_type] = np.empty(self.bytearr.shape)
             self[rscr_type].fill(gap_penalty)
@@ -873,7 +873,7 @@ class ARELIA(dict):
             scr_types.append(scr_type_res)
 
         arelia = cls(seqtxt, infmt=infmt)
-        arelia.cal_profile_score(
+        arelia.cal_profile_scr(
             weighting=weighting,
             gap_cut_accept=gap_cut_accept,
             gap_cut_cons=gap_cut_cons,
