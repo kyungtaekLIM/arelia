@@ -242,7 +242,7 @@ class Seq(list):
             self.parse_fasta(string)
         elif infmt == 'msf':
             self.parse_msf(string)
-        elif infmt == 'phylip':
+        elif infmt in ('phylip', 'phy'):
             self.parse_phylip(string)
 
     def add(self, tag, seq):
@@ -258,39 +258,36 @@ class Seq(list):
     ):
         seq_len = len(self[0].seq)
         seq_num = len(self)
-        seq_offset = max_tag_len + 3
+        seq_offset = max_tag_len+3
         oh.write(' %s %s\n' % (seq_num, seq_len))
-        FROM = 0
-        for i in range(int(np.ceil(float(seq_len) / line_len))):
+        for i, s in enumerate(range(0, seq_len, line_len)):
             for j in range(seq_num):
                 if i:
-                    oh.write(' '*seq_offset)
+                    header = ' '*seq_offset
                 else:
                     tag = self[j].tag[:max_tag_len]
-                    oh.write(tag+' '*(seq_offset-len(tag)))
-                seq = self[j].seq[FROM:FROM+line_len]
-                oh.write(' '.join(self.chunks(seq, block_len))+'\n')
-            FROM += line_len
+                    header = tag + ' '*(seq_offset-len(tag))
+                seq = ' '.join(
+                    self.chunks(self[j].seq[s:s+line_len], block_len)
+                )
+                oh.write(header+seq+'\n')
             oh.write('\n')
 
     def write_fasta(self, oh, line_len=60):
         for ob in self:
-            l = '>'+ob.tag+'\n'
-            i = 0
-            while 1:
-                frag = ob.seq[i:i+line_len]
-                if not frag:
-                    break
-                l += frag+'\n'
-                i += line_len
-            oh.write(l)
+            oh.write(
+                ">%s\n%s\n" % (
+                    ob.tag,
+                    "\n".join(self.chunks(ob.seq, line_len))
+                )
+            )
 
     def write(
         self, oh, outfmt='fasta',
         max_tag_len=10, line_len=60, block_len=10
     ):
         outfmt = outfmt.lower()
-        if outfmt == 'phylip':
+        if outfmt in ('phylip','phy'):
             self.write_phylip(
                 oh,
                 max_tag_len=max_tag_len,
@@ -831,7 +828,7 @@ class ARELIA(dict):
         self, fh, scr_type, cutoff,
         replacement='-', outfmt='fasta',
         keep_length=False, trim_taxa=False, quiet=True
-     ):
+    ):
         if fh:
             msa = self.get_col_masked_msa(
                 scr_type, cutoff,
