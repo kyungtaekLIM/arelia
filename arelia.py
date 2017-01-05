@@ -593,8 +593,16 @@ class ARELIA(dict):
     ele_ints = np.arange(len(ele_bytes), dtype=np.uint8)
     ele_ints[res_len:] = res_len
 
-    def __init__(self, seqtxt, infmt='fasta'):
-        self.tags, seqs = [], []
+    def __init__(self, seq, infmt='fasta', tags=None):
+        if infmt == 'bytearr':
+            if tags is None or len(tags) != len(seq):
+                self.exit('ERROR: The number of tags and seqs must be same.\n')
+            self.load_from_bytearr(seq, tags)
+        else:
+            self.load_from_seqtxt(seq, infmt=infmt)
+
+    def load_from_seqtxt(self, seqtxt, infmt='fasta'):
+        tags, seqs = [], []
         seqlen = None
         for e in Seq.parse_string(seqtxt, infmt=infmt):
             cur_seqlen = len(e.seq)
@@ -602,7 +610,7 @@ class ARELIA(dict):
                 self.exit('ERROR: MSA format (%s) might be wrong.\n' % (infmt))
             if seqlen is not None and seqlen != cur_seqlen:
                 self.exit('ERROR: Inconsistent Sequence Length.\n')
-            self.tags.append(e.tag)
+            tags.append(e.tag)
             seqs.append([e.seq.upper()])
             seqlen = cur_seqlen
 
@@ -611,7 +619,11 @@ class ARELIA(dict):
 
         # dtype='S' is necessary because python3 string format is unicode.
         # transform sequences to a 2D integer array with bytes.
-        self.bytearr = np.array(seqs, dtype='S').view(np.byte)
+        self.load_from_bytearr(np.array(seqs, dtype='S').view(np.byte), tags)
+
+    def load_from_bytearr(self, bytearr, tags):
+        self.bytearr = bytearr
+        self.tags = np.array(tags)
         # map bytes into integers from 0 to 20
         self.intarr = Profile.maparr(
             self.bytearr, self.ele_bytes, self.ele_ints
@@ -699,7 +711,7 @@ class ARELIA(dict):
             self[scr_type].fill(gap_penalty)
             self[scr_type][:, self.accept_cols] = score
 
-    def cal_res_scr(self, W, gap_penalty=-5.0):
+    def cal_res_scr(self, W=[5,10,15,30], gap_penalty=-5.0):
         arg = ~self.gaparr + self.cons_cols  # set patch-fitered positions
         for scr_type in self.get_scr_types():
             rscr_type = 'r'+scr_type
@@ -743,17 +755,19 @@ class ARELIA(dict):
         if keep_length:
             if trim_taxa:
                 argt = ~np.all(ngaparr, axis=1)
-                return np.compress(argt, nbytearr, axis=0)
+                return (np.compress(argt, nbytearr, axis=0),
+                    np.compress(argt, self.tags))
             else:
-                return nbytearr
+                return nbytearr, self.tags
         else:
             argc = ~np.all(ngaparr, axis=0)
             nbytearr = np.compress(argc, nbytearr, axis=1)
             if trim_taxa:
                 argt = ~np.all(ngaparr, axis=1)
-                return np.compress(argt, nbytearr, axis=0)
+                return (np.compress(argt, nbytearr, axis=0),
+                    np.compress(argt, self.tags))
             else:
-                return nbytearr
+                return nbytearr, self.tags
 
     def mask_col(
         self, CS, cutoff, replacement='-', keep_length=False, trim_taxa=False
@@ -765,19 +779,21 @@ class ARELIA(dict):
             ngaparr = ~arg_pass + self.gaparr
             if trim_taxa:
                 argt = ~np.all(ngaparr, axis=1)
-                return np.compress(argt, nbytearr, axis=0)
+                return (np.compress(argt, nbytearr, axis=0),
+                    np.compress(argt, self.tags))
             else:
-                return nbytearr
+                return nbytearr, self.tags
         else:
             if trim_taxa:
                 argt = ~np.all(
                     np.compress(arg_pass, self.gaparr, axis=1),
                     axis=1)
-                return np.compress(
+                return (np.compress(
                     argt, np.compress(arg_pass, self.bytearr, axis=1),
-                    axis=0)
+                    axis=0),
+                    np.compress(arg_pass, self.tags))
             else:
-                return np.compress(arg_pass, self.bytearr, axis=1)
+                return np.compress(arg_pass, self.bytearr, axis=1), self.tags
 
     def get_res_masked_msa(
         self, scr_type, cutoff, replacement='-',
@@ -786,11 +802,10 @@ class ARELIA(dict):
         RS = self.get(scr_type)
         if np.any(RS) is not None:
             return Seq.parse_seqarr(
-                self.mask_res(
+                *self.mask_res(
                     RS, cutoff, replacement=replacement,
                     keep_length=keep_length, trim_taxa=trim_taxa
-                ),
-                self.tags)
+                ))
 
     def get_col_masked_msa(
         self, scr_type, cutoff, replacement='-',
@@ -799,11 +814,10 @@ class ARELIA(dict):
         CS = self.get_col_scr(scr_type)
         if np.any(CS) is not None:
             return Seq.parse_seqarr(
-                self.mask_col(
+                *self.mask_col(
                     CS, cutoff, replacement=replacement,
                     keep_length=keep_length, trim_taxa=trim_taxa
-                    ),
-                self.tags)
+                    ))
 
     def write_res_masked_msa(
         self, fh, scr_type, cutoff,
@@ -879,7 +893,7 @@ class ARELIA(dict):
         )
 
         if 's1' in arelia or 's2' in arelia:
-            arelia.cal_res_scr(W, gap_penalty=gap_penalty)
+            arelia.cal_res_scr(W=W, gap_penalty=gap_penalty)
             if write:
                 arelia.write_res_masked_msa(
                     msa_res, 'r'+scr_type_res, cutoff,
